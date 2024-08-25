@@ -1,0 +1,189 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <memory>
+#include <ctime>
+
+using namespace std;
+
+// Abstract Base Class
+class Item {
+protected:
+    string itemID;
+    string title;
+    bool available;
+
+public:
+    Item(string id, string t) : itemID(id), title(t), available(true) {}
+
+    virtual ~Item() {}
+
+    virtual void getItemDetails() const = 0;
+    virtual bool checkAvailability() const = 0;
+    virtual void checkOut() = 0;
+    virtual void checkIn() = 0;
+
+    string getID() const { return itemID; }
+    string getTitle() const { return title; }
+    bool isAvailable() const { return available; }
+};
+
+// Derived Class: Book
+class Book : public Item {
+private:
+    string author;
+    string ISBN;
+
+public:
+    Book(string id, string t, string a, string isbn) : Item(id, t), author(a), ISBN(isbn) {}
+
+    void getItemDetails() const override {
+        cout << "Book ID: " << itemID << "\nTitle: " << title << "\nAuthor: " << author << "\nISBN: " << ISBN << "\nAvailability: " << (available ? "Available" : "Not Available") << endl;
+    }
+
+    bool checkAvailability() const override {
+        return available;
+    }
+
+    void checkOut() override {
+        if (available) {
+            available = false;
+            cout << "Book checked out successfully." << endl;
+        } else {
+            cout << "Book is not available." << endl;
+        }
+    }
+
+    void checkIn() override {
+        available = true;
+        cout << "Book checked in successfully." << endl;
+    }
+};
+
+// Derived Class: Journal
+class Journal : public Item {
+private:
+    string publisher;
+    int issueNumber;
+
+public:
+    Journal(string id, string t, string p, int issue) : Item(id, t), publisher(p), issueNumber(issue) {}
+
+    void getItemDetails() const override {
+        cout << "Journal ID: " << itemID << "\nTitle: " << title << "\nPublisher: " << publisher << "\nIssue Number: " << issueNumber << "\nAvailability: " << (available ? "Available" : "Not Available") << endl;
+    }
+
+    bool checkAvailability() const override {
+        return available;
+    }
+
+    void checkOut() override {
+        if (available) {
+            available = false;
+            cout << "Journal checked out successfully." << endl;
+        } else {
+            cout << "Journal is not available." << endl;
+        }
+    }
+
+    void checkIn() override {
+        available = true;
+        cout << "Journal checked in successfully." << endl;
+    }
+};
+
+// Class: Member
+class Member {
+private:
+    string memberID;
+    string name;
+    string contactInfo;
+    int loanLimit;
+    vector<string> loanHistory;
+
+public:
+    Member(string id, string n, string contact, int limit) : memberID(id), name(n), contactInfo(contact), loanLimit(limit) {}
+
+    void borrowItem(shared_ptr<Item> item) {
+        if (item->checkAvailability()) {
+            item->checkOut();
+            loanHistory.push_back(item->getID());
+            cout << name << " borrowed " << item->getTitle() << endl;
+        } else {
+            cout << item->getTitle() << " is not available for borrowing." << endl;
+        }
+    }
+
+    void returnItem(shared_ptr<Item> item) {
+        item->checkIn();
+        auto it = find(loanHistory.begin(), loanHistory.end(), item->getID());
+        if (it != loanHistory.end()) {
+            loanHistory.erase(it);
+            cout << name << " returned " << item->getTitle() << endl;
+        } else {
+            cout << "Item was not borrowed by this member." << endl;
+        }
+    }
+
+    void getLoanHistory() const {
+        cout << "Loan History for " << name << ": ";
+        for (const auto& id : loanHistory) {
+            cout << id << " ";
+        }
+        cout << endl;
+    }
+};
+
+// Class: Loan
+class Loan {
+private:
+    string loanID;
+    shared_ptr<Item> item;
+    shared_ptr<Member> member;
+    time_t dueDate;
+    time_t returnDate;
+
+public:
+    Loan(string id, shared_ptr<Item> i, shared_ptr<Member> m, time_t due) 
+        : loanID(id), item(i), member(m), dueDate(due), returnDate(0) {}
+
+    void setReturnDate(time_t date) {
+        returnDate = date;
+    }
+
+    double calculateFine() const {
+        if (returnDate > dueDate) {
+            double finePerDay = 0.5; // Example fine rate
+            double daysOverdue = difftime(returnDate, dueDate) / (60 * 60 * 24);
+            return daysOverdue * finePerDay;
+        }
+        return 0;
+    }
+};
+
+// Main function
+int main() {
+    // Create some books and journals
+    auto book1 = make_shared<Book>("B001", "1984", "George Orwell", "123456789");
+    auto journal1 = make_shared<Journal>("J001", "Science Today", "Nature Publishing", 45);
+
+    // Create a member
+    auto member1 = make_shared<Member>("M001", "Alice", "alice@example.com", 5);
+
+    // Member borrows a book
+    member1->borrowItem(book1);
+
+    // Print book details
+    book1->getItemDetails();
+
+    // Print member loan history
+    member1->getLoanHistory();
+
+    // Member returns the book
+    member1->returnItem(book1);
+
+    // Print updated book details
+    book1->getItemDetails();
+
+    return 0;
+}
